@@ -1,0 +1,96 @@
+<template>
+	<web-view
+		:ref="webviewRefName"
+		:src="src"
+		:allow="allow"
+		:sandbox="sandbox"
+		@message="message"
+		@onPostMessage="onPostMessage"
+	/>
+</template>
+
+<script>
+/**
+ * 目前不知道为啥，加上webviewStyles就会奔溃,可能nuve不支持webviewStyles
+ */
+import WebView from './WebView.js';
+
+export default {
+	props: {
+		src: {
+			type: String
+		},
+		allow: {
+			type: String
+		},
+		sandbox: {
+			type: String
+		},
+		UniJsBridgeName: {
+			type: String,
+			default: 'UniJsBridge'
+		}
+	},
+	data() {
+		return {
+			webView: null,
+			webviewRefName: null
+		};
+	},
+	created() {
+		this.webviewRefName = 'webview_' + new Date().getTime() + '_' + Math.ceil(Math.random() * 10);
+	},
+	mounted() {
+		let webviewRef = this.$refs[this.webviewRefName]
+		this.webView = new WebView(webviewRef, this.UniJsBridgeName);
+	},
+	methods: {
+		message() {
+			this.$emit('message', { ...arguments });
+		},
+		onPostMessage(data) {
+			let message = data.detail;
+			if (message) {
+				let { data, callbackId, handlerName } = message.data[0];
+				/**
+				 * handlerName为response的时候，这个时候的callbackId为客户端的回调函数ID
+				 * 其他的时候，callbackId为H5的回调函数ID
+				 */
+				if (handlerName === 'response') {
+					/**
+					 * 找到对应的回调函数;
+					 * 执行完毕后立马删除，否则集合中的东西太多了
+					 */
+					let responseCallback = this.webView.responseCallbacks[callbackId];
+					if (responseCallback) {
+						responseCallback(data);
+						delete this.webView.responseCallbacks[callbackId];
+					}
+				} else {
+					let messageHandler = this.webView.messageHandlers[handlerName];
+					let callHandler = data => {
+						this.webView.callHandler(null, data, null, callbackId);
+					};
+
+					if (messageHandler) {
+						messageHandler(data, callHandler);
+					}
+				}
+			}
+			this.$emit('onPostMessage', data);
+		},
+		callHandler() {
+			this.webView.callHandler.apply(this.webView, arguments);
+		},
+		registerHandler() {
+			this.webView.registerHandler.apply(this.webView, arguments);
+		},
+		setDefaultHandler() {
+			this.webView.setDefaultHandler.apply(this.webView, arguments);
+		},
+		send() {
+			this.webView.send.apply(this.webView, arguments);
+		}
+	}
+};
+</script>

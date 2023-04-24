@@ -1,0 +1,11 @@
+{
+  "name": "midi_play_author",
+  "version": "1.0.0",
+  "dependencies": {
+    "midi-json-parser": "^8.1.22",
+    "midi-player": "^7.1.1",
+    "node": "^19.8.1"
+  },
+  "author": "zd",
+  "license": "MIT"
+}
